@@ -48,8 +48,8 @@ public class IndexServlet extends HttpServlet {
         getServletContext().getRequestDispatcher("/WEB-INF/index.jsp").forward(request, response);
     }
 
-    private static final String subscriptionKey = "4ab4bb465e1548a0949f7f3fac7ccdd1";
-    private static final String endpoint = "https://westus.api.cognitive.microsoft.com/";
+    private static final String subscriptionKey = "";
+    private static final String endpoint = "";
 
     /**
      * Handles the HTTP <code>POST</code> method.
