@@ -106,7 +106,7 @@ public class IndexServlet extends HttpServlet {
                 resultList = cmc.moderateImages(client, resultList, imgURL);
                 long endImg = System.currentTimeMillis();
                 long elapsedTimeImg = endImg - startImg;
-                request.setAttribute("titleImages", "Image resutls: ");
+                request.setAttribute("titleImages", "Image results: ");
                 request.setAttribute("imageTimeTaken", "Time taken(In Miliseconds): " + elapsedTimeImg);
                 request.setAttribute("adultCont", "Adult Classification: " + resultList.get(0).ImageModeration.isImageAdultClassified());
                 request.setAttribute("imgAdultScore", "Adult Score: " + resultList.get(0).ImageModeration.adultClassificationScore());
