@@ -19,6 +19,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.Part;
+import models.EvaluationData;
+import services.ContentModeratorClass;
 
 /**
  *
@@ -60,6 +62,8 @@ public class IndexServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        
+        ContentModeratorClass cmc = new ContentModeratorClass();
 
         String basicText = request.getParameter("basictext");
 
@@ -73,7 +77,7 @@ public class IndexServlet extends HttpServlet {
 
         if (basicText != null || basicText.isEmpty() == false) {
             long start = System.currentTimeMillis();
-            Screen textResults = moderateText(client, basicText);
+            Screen textResults = cmc.moderateText(client, basicText);
             request.setAttribute("message", "Text results: ");
             request.setAttribute("recreview", "Recommended Review: " + textResults.classification().reviewRecommended());
             request.setAttribute("cat1", "Category 1 Score: " + textResults.classification().category1().score());
@@ -99,7 +103,7 @@ public class IndexServlet extends HttpServlet {
             try {
 
                 long startImg = System.currentTimeMillis();
-                resultList = moderateImages(client, resultList, imgURL);
+                resultList = cmc.moderateImages(client, resultList, imgURL);
                 long endImg = System.currentTimeMillis();
                 long elapsedTimeImg = endImg - startImg;
                 request.setAttribute("titleImages", "Image resutls: ");
@@ -117,66 +121,4 @@ public class IndexServlet extends HttpServlet {
         }
 
     }
-
-    public static Screen moderateText(ContentModeratorClient client, String basicText) throws IOException {
-
-        try (BufferedReader inputStream = new BufferedReader(new StringReader(basicText))) {
-            String line;
-            Screen textResults = null;
-            ScreenTextOptionalParameter para = new ScreenTextOptionalParameter();
-
-            while ((line = inputStream.readLine()) != null) {
-                if (line.length() > 0) {
-                    textResults = client.textModerations().screenText("text/plain", line.getBytes(), para.withClassify(Boolean.TRUE));
-                }
-            }
-            return textResults;
-        }
-    }
-
-    public static List<EvaluationData> moderateImages(ContentModeratorClient client, List<EvaluationData> resultsList, String urlString) throws InterruptedException, FileNotFoundException, IOException {
-
-        /*Converts image data to byte array Stream*/
-        InputStream in = new FileInputStream(urlString);
-
-        byte[] buff = new byte[8000];
-
-        int bytesRead = 0;
-
-        ByteArrayOutputStream bao = new ByteArrayOutputStream();
-
-        while ((bytesRead = in.read(buff)) != -1) {
-            bao.write(buff, 0, bytesRead);
-        }
-
-        byte[] data = bao.toByteArray();
-
-        in.close();
-
-        bao.close();
-
-        EvaluationData imageData = new EvaluationData();
-
-        // Evaluate for adult and racy content.
-        imageData.ImageModeration = client.imageModerations().evaluateFileInput(data,
-                new EvaluateFileInputOptionalParameter().withCacheImage(true));
-
-        resultsList.add(imageData);
-
-        return resultsList;
-
-    }
-
-    public static class EvaluationData {
-
-        // The URL of the evaluated image.
-        public String ImageUrl;
-        // The image moderation results.
-        public Evaluate ImageModeration;
-        // The text detection results.
-        public OCR TextDetection;
-        // The face detection results;
-        public FoundFaces FaceDetection;
-    }
-
 }

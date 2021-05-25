@@ -10,6 +10,7 @@ import com.microsoft.azure.cognitiveservices.vision.contentmoderator.models.*;
 
 import java.io.*;
 import java.util.*;
+import models.EvaluationData;
 
 /**
  *
@@ -17,63 +18,77 @@ import java.util.*;
  */
 public class ContentModeratorClass {
     
-    private static final String subscriptionKey = "4ab4bb465e1548a0949f7f3fac7ccdd1";
-    private static final String endpoint = "https://chelseylmoderator.cognitiveservices.azure.com/";
-    
-    
+    /**
+     * Public constructor for content moderator class.
+     */
     public ContentModeratorClass()
     {
-    }
-
-   public ContentModeratorClass(String urlString, String basicText) throws IOException
-    {
-        ContentModeratorClient client = ContentModeratorManager.authenticate(AzureRegionBaseUrl.fromString(endpoint),
-        "a75fb58f1c8942b79c6a2986dae0e711");
-        // Create a List in which to store the image moderation results.
-        List<EvaluationData> evaluationData = new ArrayList<EvaluationData>();
-
-        // Moderate URL images
-        moderateImages(client, evaluationData, urlString);
         
-        moderateText(client, basicText);
     }
+    
+    /**
+     *
+     * @param client the clients connection
+     * @param basicText the inserted text
+     * @return the screen of the object.
+     * @throws IOException IO exception.
+     */
+    public static Screen moderateText(ContentModeratorClient client, String basicText) throws IOException {
 
-   
-   public static String moderateText(ContentModeratorClient client, String basicText) throws IOException {
+        try (BufferedReader inputStream = new BufferedReader(new StringReader(basicText))) {
+            String line;
+            Screen textResults = null;
+            ScreenTextOptionalParameter para = new ScreenTextOptionalParameter();
 
-    try (BufferedReader inputStream = new BufferedReader(new StringReader("test"))) {
-        String line;
-        Screen textResults = null;
-
-        while ((line = inputStream.readLine()) != null) {
-            if (line.length() > 0) {
-                textResults = client.textModerations().screenText("text/plain", line.getBytes(), null);
+            while ((line = inputStream.readLine()) != null) {
+                if (line.length() > 0) {
+                    textResults = client.textModerations().screenText("text/plain", line.getBytes(), para.withClassify(Boolean.TRUE));
+                }
             }
+            return textResults;
         }
-        return (String) textResults.status().description();
     }
-}
-   
-   public static List<EvaluationData> moderateImages(ContentModeratorClient client, List<EvaluationData> resultsList, String urlString) {
-        // Evaluate each line of text
-        BodyModelModel url = new BodyModelModel();
-        url.withDataRepresentation("URL");
-        url.withValue(urlString);
-        // Save to EvaluationData class for later
+
+    /**
+     *
+     * @param client the clients connection
+     * @param resultsList the result
+     * @param urlString the url
+     * @return returns the list of evaluations.
+     * @throws InterruptedException interruped exception
+     * @throws FileNotFoundException file not found exception
+     * @throws IOException IO exception
+     */
+    public static List<EvaluationData> moderateImages(ContentModeratorClient client, List<EvaluationData> resultsList, String urlString) throws InterruptedException, FileNotFoundException, IOException {
+
+        /*Converts image data to byte array Stream*/
+        InputStream in = new FileInputStream(urlString);
+
+        byte[] buff = new byte[8000];
+
+        int bytesRead = 0;
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+
+        while ((bytesRead = in.read(buff)) != -1) {
+            bao.write(buff, 0, bytesRead);
+        }
+
+        byte[] data = bao.toByteArray();
+
+        in.close();
+
+        bao.close();
+
         EvaluationData imageData = new EvaluationData();
-        imageData.ImageUrl = url.value();
-        
+
+        // Evaluate for adult and racy content.
+        imageData.ImageModeration = client.imageModerations().evaluateFileInput(data,
+                new EvaluateFileInputOptionalParameter().withCacheImage(true));
+
+        resultsList.add(imageData);
+
         return resultsList;
-   }
-   
-    public static class EvaluationData {
-        // The URL of the evaluated image.
-        public String ImageUrl;
-        // The image moderation results.
-        public Evaluate ImageModeration;
-        // The text detection results.
-        public OCR TextDetection;
-        // The face detection results;
-        public FoundFaces FaceDetection;
+
     }
 }
